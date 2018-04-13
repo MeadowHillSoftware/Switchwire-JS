@@ -2,198 +2,6 @@
 
 var oSwitchwire = {};
 
-oSwitchwire.oSchedule = {
-    iDelay: 10,
-    oSunday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {}
-    },
-    oMonday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {
-            700: {
-                iLast: 759,
-                aExceptions: [
-                    "mousepad"
-                ]
-            },
-            800: {
-                iLast: 1159,
-                aExceptions: []
-            },
-            1200: {
-                iLast: 1259,
-                aExceptions: [
-                    "geany",
-                    "mousepad"
-                ]
-            },
-            1300: {
-                iLast: 1659,
-                aExceptions: []
-            },
-            2300: {
-                iLast: 2359,
-                aExceptions: []
-            }
-        }
-    },
-    oTuesday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {
-            700: {
-                iLast: 759,
-                aExceptions: [
-                    "mousepad"
-                ]
-            },
-            800: {
-                iLast: 1159,
-                aExceptions: []
-            },
-            1200: {
-                iLast: 1259,
-                aExceptions: [
-                    "geany",
-                    "mousepad"
-                ]
-            },
-            1300: {
-                iLast: 1659,
-                aExceptions: []
-            },
-            2300: {
-                iLast: 2359,
-                aExceptions: []
-            }
-        }
-    },
-    oWednesday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {
-            700: {
-                iLast: 759,
-                aExceptions: [
-                    "mousepad"
-                ]
-            },
-            800: {
-                iLast: 1159,
-                aExceptions: []
-            },
-            1200: {
-                iLast: 1259,
-                aExceptions: [
-                    "geany",
-                    "mousepad"
-                ]
-            },
-            1300: {
-                iLast: 1659,
-                aExceptions: []
-            },
-            2300: {
-                iLast: 2359,
-                aExceptions: []
-            }
-        }
-    },
-    oThursday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "mousepad"
-        ],
-        oCaps: {
-            "mousepad": 2
-        }
-        oPhases: {
-            700: {
-                iLast: 759,
-                aExceptions: [
-                    "mousepad"
-                ]
-            },
-            800: {
-                iLast: 1159,
-                aExceptions: []
-            },
-            1200: {
-                iLast: 1259,
-                aExceptions: [
-                    "geany",
-                    "mousepad"
-                ]
-            },
-            1300: {
-                iLast: 1659,
-                aExceptions: []
-            },
-            2300: {
-                iLast: 2359,
-                aExceptions: []
-            }
-        }
-    },
-    oFriday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {
-            700: {
-                iLast: 759,
-                aExceptions: [
-                    "mousepad"
-                ]
-            },
-            800: {
-                iLast: 1159,
-                aExceptions: []
-            },
-            1200: {
-                iLast: 1259,
-                aExceptions: [
-                    "geany",
-                    "mousepad"
-                ]
-            },
-            1300: {
-                iLast: 1659,
-                aExceptions: []
-            },
-            2300: {
-                iLast: 2359,
-                aExceptions: []
-            }
-        }
-    },
-    oSaturday: {
-        aProcesses: [
-            "pcmanfm-qt",
-            "geany",
-            "mousepad"
-        ],
-        oPhases: {}
-    }
-};
-
 oSwitchwire.detectMultipleProcesses = function() {
     var aDisallowed = oSwitchwire.aDisallowed;
     for (var i = 0; i < aDisallowed.length; i++) {
@@ -201,6 +9,7 @@ oSwitchwire.detectMultipleProcesses = function() {
         var sCommand = "pidof " + sProcess;
         oSwitchwire.exec(sCommand, oSwitchwire.getProcessName);
     }
+    var aCapped = oSwitchwire.aCapped;
     for (var p = 0; p < aCapped.length; p++) {
         var sProcess = aCapped[p];
         var sCommand = "pidof " + sProcess;
@@ -209,6 +18,8 @@ oSwitchwire.detectMultipleProcesses = function() {
 };
 
 oSwitchwire.exec = require('child_process').exec;
+
+oSwitchwire.fs = require('fs');
 
 oSwitchwire.getCurrentPhase = function() {
     var oDate = new Date();
@@ -366,12 +177,45 @@ oSwitchwire.parseSchedule = function() {
     oSwitchwire.oPhases = oToday.oPhases;
 };
 
+oSwitchwire.readSchedule = function() {
+    var file = "./schedule.json";
+    oSwitchwire.fs.exists(file, function(exists) {
+        if (exists) {
+            oSwitchwire.fs.readFile(file, 'utf8', function(err, data) {
+                if (err) {
+                    console.log(err);
+                } else {
+                    oSwitchwire.oSchedule = JSON.parse(data);
+                    oSwitchwire.setDay();
+                    oSwitchwire.parseSchedule();
+                    oSwitchwire.getCurrentPhase();
+                    oSwitchwire.loopAction();
+                    setInterval(oSwitchwire.loopAction, (oSwitchwire.iDelay * 1000));
+                }
+            });
+        } else {
+            console.log("Not found");
+        }
+    });
+};
+
 oSwitchwire.setDay = function() {
     var oDate = new Date();
     oSwitchwire.iDay = oDate.getDay();
 };
 
+oSwitchwire.writeSchedule = function() {
+    var fs = oSwitchwire.fs;
+    var sSchedule = JSON.stringify(oSwitchwire.oSchedule);
+    fs.writeFile('./schedule.json', sSchedule, 'utf8', function(err) {
+        if (err) {
+            console.log(err);
+        }
+    });
+};
+
 oSwitchwire.setDay();
+oSwitchwire.readSchedule();
 oSwitchwire.parseSchedule();
 oSwitchwire.getCurrentPhase();
 oSwitchwire.loopAction();
